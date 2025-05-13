@@ -1,157 +1,207 @@
+// backend/static/renderer.js
+
 document.addEventListener('DOMContentLoaded', () => {
+  // UI element references
+  const input = document.getElementById('fileInput');
+  const btn = document.getElementById('analyzeBtn');
+  const pre = document.getElementById('jsonOutput');
+  const img = document.getElementById('ecgPlot');
+  const progress = document.getElementById('uploadProgress');
+  const etaDisplay = document.getElementById('eta');
+  const themeToggle = document.getElementById('themeToggle');
 
-// UI element references
-const input = document.getElementById('fileInput');
-const btn   = document.getElementById('analyzeBtn');
-console.log('Renderer loaded, button is', btn);
-const pre   = document.getElementById('jsonOutput');
-const img   = document.getElementById('ecgPlot');
-const link  = document.getElementById('downloadReport');
-
-btn.addEventListener('click', async () => {
-  // 1) Validate file selection
-  if (input.files.length < 2) {
-    alert('Please select at least the .dat and .hea files (and optional .qrs/.atr).');
-    return;
+  // Create and insert percentage display
+  let percentDisplay = document.getElementById('progressPercent');
+  if (!percentDisplay) {
+    percentDisplay = document.createElement('span');
+    percentDisplay.id = 'progressPercent';
+    percentDisplay.style.marginLeft = '10px';
+    progress.parentNode.insertBefore(percentDisplay, progress.nextSibling);
   }
 
-  // 2) Build FormData
-  const form = new FormData();
-  for (const file of input.files) {
-    form.append('files', file);
+  // Create and insert Download button
+  let downloadBtn = document.getElementById('downloadReportBtn');
+  if (!downloadBtn) {
+    downloadBtn = document.createElement('button');
+    downloadBtn.id = 'downloadReportBtn';
+    downloadBtn.textContent = 'Download Report';
+    downloadBtn.style.display = 'none';
+    downloadBtn.style.marginLeft = '10px';  // add spacing
+    btn.insertAdjacentElement('afterend', downloadBtn);
   }
 
-  // 3) UI reset
-  pre.textContent = 'Analyzing…';
-  img.src = '';
-  link.style.display = 'none';
+  // Dark-mode setup
+  if (localStorage.getItem('darkMode') === 'enabled') {
+    document.body.classList.add('dark');
+    themeToggle.checked = true;
+  }
+  themeToggle.addEventListener('change', () => {
+    if (themeToggle.checked) {
+      document.body.classList.add('dark');
+      localStorage.setItem('darkMode', 'enabled');
+    } else {
+      document.body.classList.remove('dark');
+      localStorage.setItem('darkMode', 'disabled');
+    }
+  });
 
-  try {
-    // 4) Send to /analyze
-    const res = await fetch('http://127.0.0.1:8000/analyze', {
-      method: 'POST',
-      body: form
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Analyze failed: ${res.status} ${res.statusText}\n${text}`);
+  // Load average processing time (seconds) from previous runs or default to 5s
+  let avgProcTime = parseFloat(localStorage.getItem('avgProcTime')) || 5;
+  let uploadEndTime = null;
+  let procInterval = null;
+
+  btn.addEventListener('click', () => {
+    if (input.files.length < 2) {
+      alert('Please select .dat + .hea files.');
+      return;
     }
 
-    // 5) Parse and log the JSON
-    const data = await res.json();
-    console.log('Analysis response:', data);
+    // Build FormData
+    const form = new FormData();
+    for (const file of input.files) form.append('files', file);
 
+    // Reset UI
+    pre.textContent = 'Analyzing…';
+    img.src = '';
+    downloadBtn.style.display = 'none';
+    clearInterval(procInterval);
+
+    // Initialize progress UI
+    progress.style.display = 'block';
+    etaDisplay.style.display = 'block';
+    percentDisplay.style.display = 'inline';
+    progress.value = 0;
+    percentDisplay.textContent = '0%';
+    etaDisplay.textContent = 'ETA: calculating…';
+
+    const xhr = new XMLHttpRequest();
+    const startTime = Date.now();
+
+    xhr.open('POST', 'http://127.0.0.1:8000/analyze');
+
+    // Upload progress (0–50%)
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const uploadPct = (e.loaded / e.total) * 50;
+        progress.value = uploadPct;
+        percentDisplay.textContent = `${uploadPct.toFixed(1)}%`;
+        const elapsedSec = (Date.now() - startTime) / 1000;
+        const rate = e.loaded / elapsedSec;
+        const remainingBytes = e.total - e.loaded;
+        const etaUp = remainingBytes / rate;
+        etaDisplay.textContent = `ETA: ${formatTime(etaUp)}`;
+      }
+    };
+
+    // When upload ends, start processing progress (50–100%)
+    xhr.upload.onloadend = () => {
+      uploadEndTime = Date.now();
+      procInterval = setInterval(() => {
+        const elapsedProc = (Date.now() - uploadEndTime) / 1000;
+        const procPct = Math.min((elapsedProc / avgProcTime) * 50, 50);
+        const totalPct = 50 + procPct;
+        progress.value = totalPct;
+        percentDisplay.textContent = `${totalPct.toFixed(1)}%`;
+        const etaProc = Math.max(avgProcTime - elapsedProc, 0);
+        etaDisplay.textContent = `ETA: ${formatTime(etaProc)}`;
+      }, 200);
+    };
+
+    // Request complete
+    xhr.onload = async () => {
+      clearInterval(procInterval);
+      const totalTime = (Date.now() - uploadEndTime) / 1000;
+      // Update average process time
+      avgProcTime = (avgProcTime + totalTime) / 2;
+      localStorage.setItem('avgProcTime', avgProcTime);
+
+      // Finalize progress
+      progress.value = 100;
+      percentDisplay.textContent = '100%';
+      etaDisplay.textContent = 'ETA: 00:00';
+
+      setTimeout(() => {
+        progress.style.display = 'none';
+        etaDisplay.style.display = 'none';
+        percentDisplay.style.display = 'none';
+      }, 500);
+
+      if (xhr.status < 200 || xhr.status >= 300) {
+        pre.textContent = `Error: ${xhr.status}`;
+        return;
+      }
+
+      const data = JSON.parse(xhr.responseText);
+      renderTables(data);
+
+      if (data.report_path) {
+        const fileUrl = `file:///${data.report_path.replace(/\\/g, '/')}`;
+        downloadBtn.onclick = () => window.open(fileUrl);
+        downloadBtn.style.display = 'inline-block';
+      }
+
+      if (data.record_path) await renderPlot(data.record_path);
+      pre.textContent = 'Results below:';
+    };
+
+    xhr.onerror = () => {
+      clearInterval(procInterval);
+      pre.textContent = 'Network error.';
+      progress.style.display = 'none';
+      etaDisplay.style.display = 'none';
+      percentDisplay.style.display = 'none';
+    };
+
+    // Send
+    xhr.send(form);
+  });
+
+  // Helper to format seconds to HH:MM:SS or MM:SS
+  function formatTime(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    const hh = h > 0 ? h.toString().padStart(2, '0') + ':' : '';
+    return `${hh}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+
+  // Renders HRV & Predictions tables
+  function renderTables(data) {
+    // clear
     document.getElementById('hrvTableContainer').innerHTML = '';
-    //Ts not a predator, its a prediction
     document.getElementById('predTableContainer').innerHTML = '';
+    // HRV
+    const hrv = data.hrv_metrics;
+    const hrvCols = Object.keys(hrv[Object.keys(hrv)[0]]);
+    const hrvTable = createTable(['Lead', ...hrvCols], Object.entries(hrv).map(([lead, metrics]) => [lead, ...hrvCols.map(c => Array.isArray(metrics[c]) ? metrics[c].slice(0,5).map(v=>v.toFixed(1)).join(', ') : (Math.round(metrics[c]*100)/100).toString())]));
+    document.getElementById('hrvTableContainer').appendChild(hrvTable);
 
-    // ---- 1) Render HRV Metrics Table ----
-    const hrv = data.hrv_metrics;         // { lead1: { SDRR:.., RMSSD:.., … }, lead2: {...}, … }
-    const hrvContainer = document.getElementById('hrvTableContainer');
-
-    const hrvCols = Object.keys(hrv[Object.keys(hrv)[0]]);  
-    // e.g. ['SDRR','RMSSD','PRR','VLF Power',…,'PSD']
-    const hrvTable = document.createElement('table');
-    hrvTable.border = 1;
-    hrvTable.style.borderCollapse = 'collapse';
-
-    // header
-    let thead = hrvTable.createTHead();
-    let hdrRow = thead.insertRow();
-    hdrRow.insertCell().textContent = 'Lead';
-    for (const col of hrvCols) {
-    hdrRow.insertCell().textContent = col;
-    }
-
-    // body
-    let tbody = hrvTable.createTBody();
-    for (const [lead, metrics] of Object.entries(hrv)) {
-    let row = tbody.insertRow();
-    row.insertCell().textContent = lead;
-    for (const col of hrvCols) {
-        let cell = row.insertCell();
-        let val = metrics[col];
-        // if it's an array (PSD), join first N values or show length
-        if (Array.isArray(val)) {
-        cell.textContent = val.slice(0,5).map(v=>v.toFixed(1)).join(', ') + '…';
-        cell.title = JSON.stringify(val);  // full on hover
-        } else {
-        cell.textContent = (Math.round(val*100)/100).toString();
-        }
-    }
-    }
-    hrvContainer.appendChild(hrvTable);
-
-    // ---- 2) Render Predictions Table ----
-    const preds = data.predictions;       // { lead1: { Normal:8, PVC:1, … }, lead2: {...}, … }
-    const predContainer = document.getElementById('predTableContainer');
-
-    const allTypes = new Set();
-    for (const p of Object.values(preds))
-    Object.keys(p).forEach(t => allTypes.add(t));
-    const predCols = Array.from(allTypes);
-
-    const predTable = document.createElement('table');
-    predTable.border = 1;
-    predTable.style.borderCollapse = 'collapse';
-
-    // header
-    thead = predTable.createTHead();
-    hdrRow = thead.insertRow();
-    hdrRow.insertCell().textContent = 'Lead';
-    for (const col of predCols) {
-    hdrRow.insertCell().textContent = col;
-    }
-
-    // body
-    tbody = predTable.createTBody();
-    for (const [lead, counts] of Object.entries(preds)) {
-    let row = tbody.insertRow();
-    row.insertCell().textContent = lead;
-    for (const col of predCols) {
-        let cell = row.insertCell();
-        cell.textContent = counts[col] || 0;
-    }
-    }
-    predContainer.appendChild(predTable);
-
-    // 6) Verify record_path is present
-    if (!data.record_path) {
-      throw new Error('Server did not return record_path');
-    }
-    console.log('Using record_path:', data.record_path);
-
-    // 7) Display the JSON in the <pre>
-    pre.textContent = "Results below: ";
-
-    // 8) Show “Download Report” link
-    const dlUrl = `http://127.0.0.1:8000/download-report?path=${encodeURIComponent(data.report_path)}`;
-    link.href = dlUrl;
-    link.textContent = 'Download Report PDF';
-    link.style.display = 'block';
-
-    // 9) Fetch the ECG plot as a Blob
-    const plotUrl = `http://127.0.0.1:8000/plot?record_path=${encodeURIComponent(data.record_path)}`;
-    console.log('Fetching plot from:', plotUrl);
-
-    const plotRes = await fetch(plotUrl);
-    console.log('Plot response status:', plotRes.status, plotRes.statusText);
-    if (!plotRes.ok) {
-      const errText = await plotRes.text();
-      throw new Error(`Plot failed: ${plotRes.status} ${plotRes.statusText}\n${errText}`);
-    }
-
-    const blob = await plotRes.blob();
-    console.log('Received plot blob (bytes):', blob.size);
-    const blobUrl = URL.createObjectURL(blob);
-
-    // 10) Display the ECG in the <img>
-    img.src = blobUrl;
-    img.alt = 'ECG Plot';
-
-  } catch (err) {
-    console.error('Error in Analyze flow:', err);
-    pre.textContent = `Error: ${err.message}`;
+    // Predictions
+    const preds = data.predictions;
+    const allTypes = Array.from(new Set(Object.values(preds).flatMap(p => Object.keys(p))));
+    const predRows = Object.entries(preds).map(([lead, counts]) => [lead, ...allTypes.map(t => counts[t]||0)]);
+    const predTable = createTable(['Lead', ...allTypes], predRows);
+    document.getElementById('predTableContainer').appendChild(predTable);
   }
-});
+
+  // Helper to create a table given headers and rows
+  function createTable(headers, rows) {
+    const tbl = document.createElement('table'); tbl.style.borderCollapse='collapse';
+    const thead = tbl.createTHead(); const hdr = thead.insertRow();
+    headers.forEach(h => hdr.insertCell().textContent = h);
+    const tbody = tbl.createTBody();
+    rows.forEach(r => { const row=tbody.insertRow(); r.forEach(cell => row.insertCell().textContent = cell); });
+    return tbl;
+  }
+
+  // Fetch & render plot image
+  async function renderPlot(path) {
+    const url = `http://127.0.0.1:8000/plot?record_path=${encodeURIComponent(path)}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const blob = await res.blob();
+      img.src = URL.createObjectURL(blob);
+      img.alt='ECG Plot';
+    }
+  }
 });

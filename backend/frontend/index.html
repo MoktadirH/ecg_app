@@ -8,11 +8,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
   </head>
   <body>
+    <!-- Dark‐mode toggle -->
+    <div class="theme-switcher">
+      <label class="switch">
+        <input type="checkbox" id="themeToggle">
+        <span class="slider round"></span>
+      </label>
+    </div>
+
     <h1>ECG Analyzer</h1>
 
     <div class="card">
       <input type="file" id="fileInput" multiple accept=".dat,.hea,.qrs,.atr" />
       <button id="analyzeBtn">Analyze</button>
+
+      <!-- Progress bar + ETA -->
+      <progress id="uploadProgress" max="100" value="0" style="display:none;"></progress>
+      <span id="eta" class="eta" style="display:none;">ETA: --</span>
+
       <pre id="jsonOutput">No results yet.</pre>
       <a id="downloadReport" style="display:block; margin-top:10px;"></a>
     </div>
