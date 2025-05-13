@@ -1,6 +1,7 @@
 # backend/app.py
 
 import os
+import uuid
 import io
 import tempfile
 from urllib.parse import unquote
@@ -148,3 +149,23 @@ app.mount(
 @app.get("/", include_in_schema=False)
 async def read_index():
     return FileResponse(os.path.join(frontend_dir, "index.html"), media_type="text/html")
+
+
+@app.post("/api/upload_ecg")
+async def upload_ecg(file: UploadFile = File(...)):
+    # Generate a unique ID and file path
+    file_id = str(uuid.uuid4())
+    save_dir = os.path.join(os.path.dirname(__file__), "uploads")
+    os.makedirs(save_dir, exist_ok=True)
+    out_path = os.path.join(save_dir, f"{file_id}{os.path.splitext(file.filename)[1]}")
+    
+    # Stream to disk and track bytes for progress
+    with open(out_path, "wb") as buffer:
+        chunk_size = 1024 * 1024
+        total = 0
+        while chunk := await file.read(chunk_size):
+            buffer.write(chunk)
+            total += len(chunk)
+            # (Optionally emit server‐sent events or store progress in-memory)
+    
+    return {"file_id": file_id, "filename": file.filename}
