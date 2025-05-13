@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>ECG Analyzer</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <h1>ECG Analyzer</h1>
+
+    <div class="card">
+      <input type="file" id="fileInput" multiple accept=".dat,.hea,.qrs,.atr" />
+      <button id="analyzeBtn">Analyze</button>
+      <pre id="jsonOutput">No results yet.</pre>
+      <a id="downloadReport" style="display:block; margin-top:10px;"></a>
+    </div>
+
+    <div class="card">
+      <h2>HRV Metrics</h2>
+      <div id="hrvTableContainer"></div>
+    </div>
+
+    <div class="card">
+      <h2>Beat Predictions</h2>
+      <div id="predTableContainer"></div>
+    </div>
+
+    <div class="card">
+      <h2>ECG Plot</h2>
+      <img id="ecgPlot" alt="ECG Plot will appear here" />
+    </div>
+
+    <script src="/static/renderer.js"></script>
+  </body>
+</html>

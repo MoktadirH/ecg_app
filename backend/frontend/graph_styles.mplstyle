@@ -1,0 +1,16 @@
+axes.facecolor: white
+figure.facecolor: white
+grid.color: #E5E7EB
+grid.linestyle: --
+grid.linewidth: 0.75
+lines.linewidth: 2
+lines.color: #3B82F6
+font.size: 12
+axes.labelsize: 14
+axes.titlesize: 16
+axes.titleweight: bold
+xtick.color: #333333
+ytick.color: #333333
+xtick.direction: in
+ytick.direction: in
+legend.frameon: False
