@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     downloadBtn.id = 'downloadReportBtn';
     downloadBtn.textContent = 'Download Report';
     downloadBtn.style.display = 'none';
-    downloadBtn.style.marginLeft = '10px';  // add spacing
+    downloadBtn.style.marginLeft = '10px';
     btn.insertAdjacentElement('afterend', downloadBtn);
   }
 
@@ -77,7 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const xhr = new XMLHttpRequest();
     const startTime = Date.now();
 
-    xhr.open('POST', 'http://127.0.0.1:8000/analyze');
+    // Use relative path for proxy
+    xhr.open('POST', '/analyze');
 
     // Upload progress (0–50%)
     xhr.upload.onprogress = (e) => {
@@ -93,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
-    // When upload ends, start processing progress (50–100%)
     xhr.upload.onloadend = () => {
       uploadEndTime = Date.now();
       procInterval = setInterval(() => {
@@ -107,15 +107,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 200);
     };
 
-    // Request complete
     xhr.onload = async () => {
       clearInterval(procInterval);
       const totalTime = (Date.now() - uploadEndTime) / 1000;
-      // Update average process time
       avgProcTime = (avgProcTime + totalTime) / 2;
       localStorage.setItem('avgProcTime', avgProcTime);
 
-      // Finalize progress
       progress.value = 100;
       percentDisplay.textContent = '100%';
       etaDisplay.textContent = 'ETA: 00:00';
@@ -135,9 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderTables(data);
 
       if (data.report_path) {
-        //const fileUrl = `file:///${data.report_path.replace(/\\/g, '/')}`;
-        //downloadBtn.onclick = () => window.open(fileUrl);
-        downloadBtn.onclick = () => window.open(`http://127.0.0.1:8000/download-report?path=${encodeURIComponent(data.report_path)}`,'_blank');
+        downloadBtn.onclick = () => window.open(`/download-report?path=${encodeURIComponent(data.report_path)}`, '_blank');
         downloadBtn.style.display = 'inline-block';
       }
 
@@ -153,11 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
       percentDisplay.style.display = 'none';
     };
 
-    // Send
     xhr.send(form);
   });
 
-  // Helper to format seconds to HH:MM:SS or MM:SS
   function formatTime(sec) {
     const h = Math.floor(sec / 3600);
     const m = Math.floor((sec % 3600) / 60);
@@ -166,18 +159,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${hh}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
 
-  // Renders HRV & Predictions tables
   function renderTables(data) {
-    // clear
     document.getElementById('hrvTableContainer').innerHTML = '';
     document.getElementById('predTableContainer').innerHTML = '';
-    // HRV
     const hrv = data.hrv_metrics;
     const hrvCols = Object.keys(hrv[Object.keys(hrv)[0]]);
     const hrvTable = createTable(['Lead', ...hrvCols], Object.entries(hrv).map(([lead, metrics]) => [lead, ...hrvCols.map(c => Array.isArray(metrics[c]) ? metrics[c].slice(0,5).map(v=>v.toFixed(1)).join(', ') : (Math.round(metrics[c]*100)/100).toString())]));
     document.getElementById('hrvTableContainer').appendChild(hrvTable);
 
-    // Predictions
     const preds = data.predictions;
     const allTypes = Array.from(new Set(Object.values(preds).flatMap(p => Object.keys(p))));
     const predRows = Object.entries(preds).map(([lead, counts]) => [lead, ...allTypes.map(t => counts[t]||0)]);
@@ -185,7 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('predTableContainer').appendChild(predTable);
   }
 
-  // Helper to create a table given headers and rows
   function createTable(headers, rows) {
     const tbl = document.createElement('table'); tbl.style.borderCollapse='collapse';
     const thead = tbl.createTHead(); const hdr = thead.insertRow();
@@ -195,14 +183,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return tbl;
   }
 
-  // Fetch & render plot image
   async function renderPlot(path) {
-    const url = `http://127.0.0.1:8000/plot?record_path=${encodeURIComponent(path)}`;
-    const res = await fetch(url);
+    const res = await fetch(`/plot?record_path=${encodeURIComponent(path)}`);
     if (res.ok) {
       const blob = await res.blob();
       img.src = URL.createObjectURL(blob);
-      img.alt='ECG Plot';
+      img.alt = 'ECG Plot';
     }
   }
 });
