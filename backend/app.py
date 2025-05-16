@@ -169,3 +169,7 @@ async def upload_ecg(file: UploadFile = File(...)):
             # (Optionally emit server‐sent events or store progress in-memory)
     
     return {"file_id": file_id, "filename": file.filename}
+
+@app.get("/")
+async def read_root():
+    return {"message": "ECG Analyzer is online!"}
