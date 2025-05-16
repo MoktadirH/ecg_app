@@ -135,8 +135,9 @@ document.addEventListener('DOMContentLoaded', () => {
       renderTables(data);
 
       if (data.report_path) {
-        const fileUrl = `file:///${data.report_path.replace(/\\/g, '/')}`;
-        downloadBtn.onclick = () => window.open(fileUrl);
+        //const fileUrl = `file:///${data.report_path.replace(/\\/g, '/')}`;
+        //downloadBtn.onclick = () => window.open(fileUrl);
+        downloadBtn.onclick = () => window.open(`http://127.0.0.1:8000/download-report?path=${encodeURIComponent(data.report_path)}`,'_blank');
         downloadBtn.style.display = 'inline-block';
       }
 
