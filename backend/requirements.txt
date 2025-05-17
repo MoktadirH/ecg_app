@@ -9,4 +9,4 @@ numpy
 scipy
 uvicorn
 python-multipart
-pywt
+PyWavelets
