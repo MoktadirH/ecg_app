@@ -172,4 +172,4 @@ async def upload_ecg(file: UploadFile = File(...)):
 
 @app.get("/")
 async def read_root():
-    return {"message": "ECG Analyzer is online!"}
+    return {"message": "ECG Analyzer is online and ready to go!"}
