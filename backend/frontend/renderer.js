@@ -1,4 +1,3 @@
-console.log("🟢 renderer.js loaded");
 document.addEventListener('DOMContentLoaded', () => {
   // UI element references
   const input = document.getElementById('fileInput');
