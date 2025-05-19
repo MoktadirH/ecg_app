@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const progress = document.getElementById('uploadProgress');
   const etaDisplay = document.getElementById('eta');
   const themeToggle = document.getElementById('themeToggle');
+  const runSampleBtn  = document.getElementById('runSampleBtn');
 
   // Create and insert percentage display
   let percentDisplay = document.getElementById('progressPercent');
@@ -193,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
     // === 4) Insert “Run Sample” button ===
-  let runSampleBtn = document.getElementById('runSampleBtn');
   if (!runSampleBtn) {
     runSampleBtn = document.createElement('button');
     runSampleBtn.id = 'runSampleBtn';
@@ -224,4 +224,31 @@ document.addEventListener('DOMContentLoaded', () => {
       pre.textContent = `Error: ${err.message}`;
     }
   });
+
+  console.log("runSampleBtn element:", runSampleBtn);
+    runSampleBtn.addEventListener('click', async () => {
+      console.log("▶️ Run Sample clicked");
+      pre.textContent = 'Running sample…';
+      img.src = '';
+      downloadBtn.style.display = 'none';
+      try {
+        // use full URL to be explicit
+        const res = await fetch('http://127.0.0.1:8000/analyze-sample');
+        console.log("Sample analyze response:", res);
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Status ${res.status}: ${errText}`);
+        }
+        const data = await res.json();
+        console.log("Sample data JSON:", data);
+
+        // now call your existing renderResults() or inline table/plot logic
+        renderResults(data);
+
+      } catch (err) {
+        console.error("Error in run-sample flow:", err);
+        pre.textContent = `Error running sample: ${err.message}`;
+      }
+
+
 });
