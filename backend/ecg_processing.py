@@ -1,7 +1,7 @@
 # backend/ecg_processing.py
 
 # Core signal-processing routines
-from .Functions import (
+from Functions import (
     butterworthFilter,
     detectPeaks,
     hrvMetrics,
@@ -12,7 +12,7 @@ from .Functions import (
 )  # :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}
 
 # I/O and record-loading utilities
-from .Main import (
+from Main import (
     load_wfdb_record,
     find_ecg_file,
     read_csv_ecg
