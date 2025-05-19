@@ -2,7 +2,7 @@ import pandas as pd
 import sys
 import os
 import matplotlib.pyplot as plt
-from . import Functions as fx
+import Functions as fx
 import numpy as np
 import wfdb
 from typing import Optional, Tuple
