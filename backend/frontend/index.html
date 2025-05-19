@@ -22,6 +22,12 @@
       <input type="file" id="fileInput" multiple accept=".dat,.hea,.qrs,.atr" />
       <button id="analyzeBtn">Analyze</button>
 
+      <div class="toolbar">
+        <input type="file" id="fileInput" multiple accept=".dat,.hea,.qrs,.atr" />
+        <button id="analyzeBtn">Analyze</button>
+        <button id="runSampleBtn">Run Sample</button>
+      </div>
+
       <!-- Progress bar + ETA -->
       <progress id="uploadProgress" max="100" value="0" style="display:none;"></progress>
       <span id="eta" class="eta" style="display:none;">ETA: --</span>
@@ -45,6 +51,13 @@
       <img id="ecgPlot" alt="ECG Plot will appear here" />
     </div>
 
-    <script src="/static/renderer.js"></script>
+    <script src="/static/renderer.js"></script>\
+
+    <footer style="margin-top:2em; font-size:0.9em; color:#aaa; text-align:center;">
+      Data sourced from the <a href="https://physionet.org/content/mitdb/1.0.0/" target="_blank">
+        MIT-BIH Arrhythmia Database
+      </a>. Visit the site for more recordings and scenarios.
+    </footer>
+
   </body>
 </html>

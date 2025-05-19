@@ -133,6 +133,43 @@ async def download_report(path: str):
         filename=os.path.basename(local_path),
     )
 
+# === 4) Run‐sample endpoint ===
+@app.get("/analyze-sample")
+async def analyze_sample():
+    """
+    Analyze a pre‐bundled sample (sample1.dat/.hea/.qrs in backend/samples)
+    """
+    sample_dir = os.path.join(BASE_DIR, "samples")
+    dat = os.path.join(sample_dir, "sample1.dat")
+    hea = os.path.join(sample_dir, "sample1.hea")
+    qrs = os.path.join(sample_dir, "sample1.qrs")
+    if not (os.path.exists(dat) and os.path.exists(hea)):
+        raise HTTPException(404, "Sample files not found")
+
+    # Run your existing pipeline
+    full = process_file(dat)
+    full["record_path"] = dat
+
+    # Build the JSON‐safe dict exactly as in /analyze
+    clean = {
+        "hrv_metrics": {
+            lead: {
+                k: (v.tolist() if isinstance(v, np.ndarray) else float(v))
+                for k, v in metrics.items()
+            }
+            for lead, metrics in full["hrv_metrics"].items()
+        },
+        "predictions": full["predictions"],
+        "report_path": full["report_path"],
+        "record_path": full["record_path"],
+    }
+    if ann := full.get("annotation"):
+        clean["annotation_samples"] = ann.sample.tolist()
+        if hasattr(ann, "symbol"):
+            clean["annotation_symbols"] = ann.symbol.tolist()
+
+    return JSONResponse(content=clean)
+
 # === 2) Static files under /static ===
 
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
