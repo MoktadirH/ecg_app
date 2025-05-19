@@ -224,15 +224,4 @@ document.addEventListener('DOMContentLoaded', () => {
       pre.textContent = `Error: ${err.message}`;
     }
   });
-
-  // === 5) Inject MIT‐DB footer ===
-  const footer = document.createElement('footer');
-  footer.innerHTML = `
-    Data sourced from the
-    <a href="https://physionet.org/about/database/" target="_blank">
-      MIT-BIH Arrhythmia Database
-    </a>. Visit PhysioNet for more recordings.
-  `;
-  footer.style = 'margin-top:2em; font-size:0.9em; text-align:center; color:#888;';
-  document.body.appendChild(footer);
 });
