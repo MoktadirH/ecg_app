@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from Functions import butterworthFilter, detectPeaks
-from .ecg_processing import process_file
+from ecg_processing import process_file
 
 app = FastAPI()
 
