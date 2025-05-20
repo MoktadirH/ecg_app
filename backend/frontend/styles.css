@@ -68,6 +68,20 @@ tr:hover { background-color: #EFF6FF; }
   color: #666666;
 }
 
+#authorCredit {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  font-size: 0.75em;
+  color: #aaa;
+  background: rgba(0,0,0,0.2);
+  padding: 4px 8px;
+  border-radius: 4px;
+  pointer-events: none;  /* clicks pass through */
+  user-select: none;     /* non-selectable text */
+}
+
+
 /* --- Dark mode styles --- */
 body.dark {
   background-color: #111827;
@@ -123,16 +137,4 @@ input:checked + .slider:before {
   transform: translateX(24px);
 }
 
-#authorCredit {
-  position: fixed;
-  bottom: 10px;
-  right: 10px;
-  font-size: 0.75em;
-  color: #aaa;
-  background: rgba(0,0,0,0.2);
-  padding: 4px 8px;
-  border-radius: 4px;
-  pointer-events: none;  /* clicks pass through */
-  user-select: none;     /* non-selectable text */
-}
 
