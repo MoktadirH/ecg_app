@@ -125,7 +125,7 @@ input:checked + .slider:before {
 
 #authorCredit {
   position: fixed;
-  bottom: 10px;
+  bottom: 1000px;
   right: 10px;
   font-size: 0.75em;
   color: #aaa;
