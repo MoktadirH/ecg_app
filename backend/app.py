@@ -4,6 +4,7 @@ import os
 import uuid
 import io
 import tempfile
+import typing
 from urllib.parse import unquote
 
 import numpy as np
@@ -18,7 +19,25 @@ from fastapi.staticfiles import StaticFiles
 from Functions import butterworthFilter, detectPeaks
 from ecg_processing import process_file
 
+class LimitUploadSizeMiddleware:
+    def __init__(self, app, max_upload_size: int):
+        self.app = app
+        self.max_upload_size = max_upload_size
+
+    async def __call__(self, scope: dict, receive: typing.Callable, send: typing.Callable):
+        if scope["type"] == "http":
+            headers = dict(scope["headers"])
+            if b"content-length" in headers:
+                length = int(headers[b"content-length"])
+                if length > self.max_upload_size:
+                    res = JSONResponse({"detail":"File too large"}, status_code=413)
+                    await res(scope, receive, send)
+                    return
+        await self.app(scope, receive, send)
+
 app = FastAPI()
+MAX_UPLOAD = 100 * 1024 * 1024
+app.add_middleware(LimitUploadSizeMiddleware, max_upload_size=MAX_UPLOAD)
 
 # CORS (must come first)
 app.add_middleware(
