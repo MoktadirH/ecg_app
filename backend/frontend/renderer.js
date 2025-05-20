@@ -183,11 +183,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function renderPlot(path) {
-    const res = await fetch(`/plot?record_path=${encodeURIComponent(path)}`);
+    // Use the same origin (host & port) as your API:
+    const apiUrl = `${window.location.origin}/plot?record_path=${encodeURIComponent(path)}`;
+    console.log('Fetching ECG plot from:', apiUrl);
+    const res = await fetch(apiUrl);
     if (res.ok) {
       const blob = await res.blob();
       img.src = URL.createObjectURL(blob);
       img.alt = 'ECG Plot';
+    } else {
+      console.error('Plot failed:', res.status, await res.text());
     }
   }
 });
